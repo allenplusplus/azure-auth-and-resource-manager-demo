@@ -1,0 +1,22 @@
+@{
+    ViewData["Title"] = "Index";
+}
+
+<h1>OAuth With Azure</h1>
+@if (ViewData["LoggedIn"].Equals("true"))
+{
+    <div>
+        <span>Logged In</span><br/>
+        <a href='@ViewData["SignoutUrl"]'>Sign out</a><br/>
+        <a href="/deploy">Deploy</a>
+    </div>
+    <div>
+    </div>
+}
+else
+{
+    <div>
+        <span>Not logged In</span><br/>
+        <a href="/auth/signin">Sign in</a><br/>
+    </div>
+}

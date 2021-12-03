@@ -1,0 +1,138 @@
+@{
+    ViewData["Title"] = "Deploy";
+}
+
+<h1>Deploy ACS Instance</h1>
+<h2>Select subscription</h2>
+<select id="subscriptions"></select><br/>
+<h2>Select resource group</h2>
+<select id="resourceGroups"></select><br/>
+<h2>Enter ACS instance name</h2>
+<input id="instanceName" type="text"><br/>
+<button id="submit">submit</button>
+<span id="error"></span>
+
+@section Scripts{
+    <script type="text/javascript">
+        var subscriptions = undefined;
+        var selectedSubscriptionId = "";
+        var selectedResourceGroup = "";
+
+        function submitClicked()
+        {
+            if (selectedSubscriptionId.length === 0)
+            {
+                console.error("subscription not selected");
+                document.getElementById("error").textContent = "subscription not selected";
+                return;
+            }
+
+            if (selectedResourceGroup.length === 0)
+            {
+                console.error("resource group not selected");
+                document.getElementById("error").textContent = "resource group not selected";
+                return;
+            }
+
+            const instanceName = document.getElementById("instanceName").value;
+            if (instanceName.length === 0)
+            {
+                console.error("instance name not provided");
+                document.getElementById("error").textContent = "instance name not provided";
+                return;
+            }
+
+            document.getElementById("error").textContent = "";
+            window.location.href = "/deploy/submit?subscriptionId=" + selectedSubscriptionId + "&resourceGroupName="
+                + selectedResourceGroup + "&instanceName=" + instanceName;
+        }
+
+        function resourceGroupsSelectChanged(event)
+        {
+            document.getElementById("error").textContent = "";
+            selectedResourceGroup = event.target.value;
+            console.log('selected ' + selectedResourceGroup);
+        }
+
+        async function updateResourceGroups()
+        {
+            document.getElementById("error").textContent = "";
+            selectedResourceGroup = "";
+
+            const resourceGroupsResponse = await fetch("/resourceGroups?subscriptionId="
+                + selectedSubscriptionId, { credentials: "include" });
+            if (resourceGroupsResponse.status !== 200)
+            {
+                console.error("get resource groups status " + resourceGroupsResponse.status);
+                document.getElementById("error").textContent = "failed to load resourceGroups";
+                return;
+            }
+            const resourceGroupsJson = await resourceGroupsResponse.json();
+            console.log(resourceGroupsJson);
+
+            const resourceGroupsSelect = document.getElementById("resourceGroups");
+            resourceGroupsSelect.innerHTML = "";
+            const defaultOption = document.createElement("option");
+            defaultOption.text = "select an option";
+            defaultOption.setAttribute("disabled", true);
+            defaultOption.setAttribute("selected", true);
+            defaultOption.setAttribute("hidden", true);
+            resourceGroupsSelect.add(defaultOption);
+            for (const resourceGroup of resourceGroupsJson.value)
+            {
+                const option = document.createElement("option");
+                option.value = resourceGroup.name;
+                option.text = resourceGroup.name;
+                resourceGroupsSelect.add(option);
+            }
+            resourceGroupsSelect.onchange = resourceGroupsSelectChanged;
+        }
+
+        function subscriptionsSelectChanged(event)
+        {
+            document.getElementById("error").textContent = "";
+            selectedSubscriptionId = event.target.value;
+            console.log('selected ' + selectedSubscriptionId);
+            updateResourceGroups();
+        }
+
+        async function updateSubscriptionsDropdown()
+        {
+            if (subscriptions !== undefined)
+            {
+                return;
+            }
+
+            const subscriptionsResponse = await fetch("/subscriptions", { credentials: "include" });
+            if (subscriptionsResponse.status !== 200)
+            {
+                console.error("get subscriptions status " + subscriptionsResponse.status);
+                document.getElementById("error").textContent = "failed to load subscriptions";
+                return;
+            }
+            const subscriptionsJson = await subscriptionsResponse.json();
+            subscriptions = subscriptionsJson;
+            console.log(subscriptions);
+
+            const subscriptionsSelect = document.getElementById("subscriptions");
+            subscriptionsSelect.innerHTML = "";
+            const defaultOption = document.createElement("option");
+            defaultOption.text = "select an option";
+            defaultOption.setAttribute("disabled", true);
+            defaultOption.setAttribute("selected", true);
+            defaultOption.setAttribute("hidden", true);
+            subscriptionsSelect.add(defaultOption);
+            for (const subscription of subscriptions.value)
+            {
+                const option = document.createElement("option");
+                option.value = subscription.subscriptionId;
+                option.text = subscription.displayName;
+                subscriptionsSelect.add(option);
+            }
+            subscriptionsSelect.onchange = subscriptionsSelectChanged
+        }
+
+        document.getElementById("submit").onclick = submitClicked;
+        updateSubscriptionsDropdown();
+    </script>
+}

@@ -1,0 +1,50 @@
+@{
+    ViewData["Title"] = "Post";
+}
+
+<h1>Post Deploy</h1>
+<h2>Deployment name</h2>
+<span>@ViewData["DeploymentName"]</span>
+<h2>Provisioning State (polling every 15 seconds)</h2>
+<span id="state"></span>
+<span id="error"></span>
+
+@section Scripts{
+    <script type="text/javascript">
+        var interval;
+
+        function stopPolling()
+        {
+            clearInterval(interval);
+        }
+
+        async function pollProvisioningState()
+        {
+            const stateResponse = await fetch("/deploy/state?subscriptionId=" + '@ViewData["SubscriptionId"]'
+                + "&resourceGroupName=" + '@ViewData["ResourceGroupName"]' + "&deploymentName="
+                + '@ViewData["DeploymentName"]', { credentials: "include" });
+
+            if (stateResponse.status !== 200)
+            {
+                console.error("get provisioning state status " + stateResponse.status);
+                document.getElementById("error").textContent = "failed to get provisioning state";
+                return;
+            }
+
+            const stateJson = await stateResponse.json();
+            const stateText = stateJson.properties.provisioningState;
+
+            console.log("get provisioning state ", stateJson);
+            document.getElementById("error").textContent = "";
+            document.getElementById("state").textContent = stateText;
+
+            if (stateText === "Canceled" || stateText === "Deleted" || stateText === "Failed"
+                || stateText === "NotSpecified" || stateText === "Succeeded")
+            {
+                stopPolling();
+            }
+        }
+
+        interval = setInterval(pollProvisioningState, 15000);
+    </script>
+}
